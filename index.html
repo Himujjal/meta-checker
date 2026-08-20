@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meta Checker — inspect social &amp; SEO meta tags</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --border: #e3e6ea;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --warn: #d97706;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .container { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  header { margin-bottom: 28px; }
+  header h1 { font-size: 22px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  form {
+    display: flex;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  input[type="url"] {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    padding: 10px 12px;
+    background: transparent;
+    color: var(--text);
+  }
+  button {
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+  button:hover { background: #1d4ed8; }
+  button:disabled { opacity: .6; cursor: default; }
+
+  .status { margin: 16px 0; font-size: 14px; color: var(--muted); min-height: 20px; }
+  .status.error { color: var(--bad); }
+  .status.loading { color: var(--accent); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 14px; }
+
+  /* Social preview mock */
+  .preview { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-width: 520px; }
+  .preview .img {
+    height: 220px;
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 13px;
+  }
+  .preview .img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .preview .body { padding: 14px 16px; }
+  .preview .site { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+  .preview .ptitle { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .preview .pdesc { font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Checklist */
+  .checklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .item {
+    display: flex; align-items: flex-start; gap: 8px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+  }
+  .item .mark { font-weight: 700; line-height: 1.3; }
+  .item.ok .mark { color: var(--ok); }
+  .item.missing .mark { color: var(--bad); }
+  .item .label { font-weight: 600; }
+  .item .value { color: var(--muted); word-break: break-all; margin-top: 2px; }
+
+  /* Meta table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; width: 40%; }
+  td { word-break: break-all; }
+  tr:last-child td, tr:last-child th { border-bottom: none; }
+
+  .info-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    font-size: 12px; background: var(--accent-soft); color: var(--accent);
+    border-radius: 999px; padding: 4px 10px; word-break: break-all;
+  }
+
+  details { font-size: 13px; color: var(--muted); }
+  details summary { cursor: pointer; font-weight: 600; color: var(--text); }
+  details ul { margin: 10px 0 0; padding-left: 20px; }
+  details li { margin-bottom: 6px; }
+  details code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  .hidden { display: none; }
+  footer { margin-top: 32px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Meta Checker</h1>
+    <p>Point at any URL to see its SEO and social-sharing meta tags, and what's missing.</p>
+  </header>
+
+  <form id="form">
+    <input id="url" type="url" placeholder="https://example.com" autocomplete="url" spellcheck="false" required>
+    <button id="btn" type="submit">Check</button>
+  </form>
+
+  <div id="status" class="status"></div>
+
+  <section id="results" class="hidden">
+    <div class="info-chips" id="chips"></div>
+
+    <div class="card">
+      <h2>Social preview</h2>
+      <div class="preview" id="preview"></div>
+    </div>
+
+    <div class="card">
+      <h2>Required tags</h2>
+      <div class="checklist" id="checklist"></div>
+    </div>
+
+    <div class="card">
+      <h2>All meta tags</h2>
+      <table id="metatable"></table>
+    </div>
+
+    <details>
+      <summary>How these tags are used</summary>
+      <ul>
+        <li><strong>Google search results</strong> use <code>&lt;title&gt;</code> and <code>meta description</code> for the result snippet.</li>
+        <li><strong>Facebook, WhatsApp, iMessage, Slack, Discord, LinkedIn</strong> read Open Graph tags (<code>og:title</code>, <code>og:description</code>, <code>og:image</code>, <code>og:url</code>, <code>og:type</code>, <code>og:site_name</code>) to build link previews.</li>
+        <li><strong>X / Twitter</strong> prefers <code>twitter:card</code>, <code>twitter:title</code>, <code>twitter:description</code>, <code>twitter:image</code>, and falls back to Open Graph when they're absent.</li>
+        <li><strong>Canonical URL</strong> tells search engines which URL is the authoritative version of the page.</li>
+        <li><strong>Favicon</strong> shows in browser tabs and bookmarks.</li>
+        <li><strong>Charset, viewport, html lang</strong> are basic correctness signals for rendering and accessibility.</li>
+      </ul>
+    </details>
+  </section>
+
+  <footer>Runs locally on Bun — no data leaves your machine except the URL you check.</footer>
+</div>
+
+<script>
+const form = document.getElementById("form");
+const input = document.getElementById("url");
+const btn = document.getElementById("btn");
+const statusEl = document.getElementById("status");
+const results = document.getElementById("results");
+const chips = document.getElementById("chips");
+const preview = document.getElementById("preview");
+const checklist = document.getElementById("checklist");
+const metatable = document.getElementById("metatable");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  let url = input.value.trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+  results.classList.add("hidden");
+  setStatus("Checking " + url + "…", "loading");
+  btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/meta?url=" + encodeURIComponent(url));
+    const data = await res.json();
+    if (data.status !== "ok") {
+      setStatus(data.error || "Something went wrong.", "error");
+      return;
+    }
+    setStatus("");
+    render(data);
+  } catch (err) {
+    setStatus("Request failed: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = "status" + (cls ? " " + cls : "");
+}
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function render(data) {
+  renderChips(data);
+  renderPreview(data);
+  renderChecklist(data.checklist);
+  renderTable(data.metas);
+  results.classList.remove("hidden");
+}
+
+function renderChips(data) {
+  chips.replaceChildren();
+  const parts = [
+    ["final URL", data.finalUrl],
+    ["content-type", data.contentType],
+    ["lang", data.lang],
+    ["charset", data.charset],
+  ];
+  for (const [label, value] of parts) {
+    if (!value) continue;
+    const chip = el("span", "chip", label + ": " + value);
+    chips.appendChild(chip);
+  }
+}
+
+function renderPreview(data) {
+  preview.replaceChildren();
+  const image = data.og.image || data.twitter.image;
+  const title = data.og.title || data.title || "(no title)";
+  const desc = data.og.description || data.twitter.description || data.checklist.find(c => c.key === "description")?.value || "";
+  const site = data.og.site_name || new URL(data.finalUrl).hostname;
+  const type = data.og.type ? " · " + data.og.type : "";
+
+  const imgWrap = el("div", "img");
+  if (image) {
+    const img = document.createElement("img");
+    img.src = "/api/image?url=" + encodeURIComponent(image);
+    img.alt = "";
+    img.onerror = () => { imgWrap.replaceChildren(el("span", null, "image failed to load")); };
+    imgWrap.appendChild(img);
+  } else {
+    imgWrap.appendChild(el("span", null, "no og:image"));
+  }
+
+  const body = el("div", "body");
+  body.appendChild(el("div", "site", site + type));
+  body.appendChild(el("div", "ptitle", title));
+  if (desc) body.appendChild(el("div", "pdesc", desc));
+
+  preview.appendChild(imgWrap);
+  preview.appendChild(body);
+}
+
+function renderChecklist(items) {
+  checklist.replaceChildren();
+  for (const item of items) {
+    const row = el("div", "item " + (item.present ? "ok" : "missing"));
+    row.appendChild(el("span", "mark", item.present ? "✓" : "✗"));
+    const text = el("div");
+    text.appendChild(el("div", "label", item.label));
+    if (item.value) text.appendChild(el("div", "value", item.value));
+    row.appendChild(text);
+    checklist.appendChild(row);
+  }
+}
+
+function renderTable(metas) {
+  metatable.replaceChildren();
+  if (!metas.length) {
+    const tr = document.createElement("tr");
+    const td = el("td", null, "No meta tags found.");
+    td.colSpan = 2;
+    tr.appendChild(td);
+    metatable.appendChild(tr);
+    return;
+  }
+  for (const m of metas) {
+    const tr = document.createElement("tr");
+    tr.appendChild(el("th", null, m.key));
+    tr.appendChild(el("td", null, m.value));
+    metatable.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>
