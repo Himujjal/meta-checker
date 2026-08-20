@@ -115,17 +115,30 @@ async function proxyImage(target: string) {
   });
 }
 
+async function fetchHtml(target: string) {
+  const opts = {
+    redirect: "follow" as const,
+    signal: AbortSignal.timeout(10_000),
+    headers: {
+      "user-agent": "meta-checker/1.0",
+      accept: "text/html,application/xhtml+xml",
+    },
+  };
+  try {
+    return await fetch(target, opts);
+  } catch (err) {
+    // Plain-HTTP dev servers (localhost, etc.) often don't speak TLS — retry over http.
+    if (target.startsWith("https://")) {
+      return await fetch("http://" + target.slice("https://".length), opts);
+    }
+    throw err;
+  }
+}
+
 async function checkMeta(target: string) {
   let res: Response;
   try {
-    res = await fetch(target, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(10_000),
-      headers: {
-        "user-agent": "meta-checker/1.0",
-        accept: "text/html,application/xhtml+xml",
-      },
-    });
+    res = await fetchHtml(target);
   } catch (err) {
     return json(
       { status: "error", url: target, error: `Could not fetch URL: ${(err as Error).message}` },
